@@ -9,20 +9,8 @@
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
                 
         <script src="./node_modules/html5-qrcode/html5-qrcode.min.js"></script>
-        <style>
-        main {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        #reader {
-            width: 600px;
-        }
-        #result {
-            text-align: center;
-            font-size: 1.5rem;
-        }
-    </style>
+
+        <link rel="stylesheet" href="./css/style.css">
     </head>
     <body>
         <div class="container">
@@ -40,6 +28,13 @@
     </body>
     <script>
 
+        function clearScanner() {
+            scanner.clear();
+            // Clears scanning instance
+            document.getElementById('reader').remove();
+            // Removes reader element from DOM since no longer needed
+        }
+
         const scanner = new Html5QrcodeScanner('reader', { 
             // Scanner will be initialized in DOM inside element with id of 'reader'
             qrbox: {
@@ -55,18 +50,47 @@
 
         function success(result) {
 
-            document.getElementById('result').innerHTML = `
-            <h2>Success!</h2>
-            <p><a href="${result}">${result}</a></p>
-            `;
-            // Prints result as a link inside result element
+            clearScanner();
 
-            scanner.clear();
-            // Clears scanning instance
+            // 1. Create a new XMLHttpRequest object
+            let xhr = new XMLHttpRequest();
 
-            document.getElementById('reader').remove();
-            // Removes reader element from DOM since no longer needed
-        
+            // 2. Configure it: GET-request for the URL /article/.../load
+            var body = `action=check_in_barcode&api_key=12326&barcode=${result}`;
+            xhr.open('POST', 'https://altromondo.com/wp-admin/admin-ajax.php?_fs_blog_admin=true');
+            xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+
+            // 4. This will be called after the response is received
+            xhr.onload = function() {
+                if(xhr.status == 200) {
+                    switch (xhr.responseText) {
+                        case '1' :
+                            alert('ticket valid!');
+                            break;
+                        case '2':
+                            alert('ticket NOT valid, or already validated');
+                            break;
+                        default:
+                            alert('error: try again');
+                            break
+                    }
+                }
+            };
+
+            xhr.onprogress = function(event) {
+            if (event.lengthComputable) {
+                alert(`Received ${event.loaded} of ${event.total} bytes`);
+            } else {
+                alert(`Received ${event.loaded} bytes`); // no Content-Length
+            }
+
+            };
+
+            xhr.onerror = function() {
+                alert("Request failed");
+            };
+            // 3. Send the request over the network
+            xhr.send(body);
         }
 
         function error(err) {
